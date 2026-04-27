@@ -5,7 +5,7 @@ import "github.com/pracucci/idotmatrix-overclocked/pkg/graphic"
 // Board dimensions
 const (
 	BoardWidth  = 10 // Standard Tetris board width
-	BoardHeight = 20 // Standard Tetris board height
+	BoardHeight = 10 // Standard Tetris board height
 )
 
 // Cell represents a single cell on the game board

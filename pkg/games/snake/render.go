@@ -4,28 +4,25 @@ package snake
 var (
 	black       = [3]uint8{0, 0, 0}
 	darkGreen   = [3]uint8{0, 100, 0}
-	Green       = [3]uint8{0, 200, 0}       // Snake body color
-	BrightGreen = [3]uint8{50, 255, 50}     // Snake head color
+	Green       = [3]uint8{0, 200, 0}   // Snake body color
+	BrightGreen = [3]uint8{50, 255, 50} // Snake head color
 	darkRed     = [3]uint8{100, 0, 0}
-	Red         = [3]uint8{255, 0, 0}       // Food color
+	Red         = [3]uint8{255, 0, 0} // Food color
 	white       = [3]uint8{255, 255, 255}
 	gray        = [3]uint8{80, 80, 80}
 
 	// Obstacle colors
-	rockColor    = [3]uint8{55, 55, 60}  // Dark gray with slight blue tint
-	rockColorAlt = [3]uint8{50, 50, 55}  // Slightly darker variation
-	lakeColor    = [3]uint8{35, 70, 135} // Blue
-	lakeColorAlt = [3]uint8{40, 80, 145} // Lighter wave variation
+	rockColor    = [3]uint8{55, 55, 60}
+	rockColorAlt = [3]uint8{50, 50, 55}
+	lakeColor    = [3]uint8{35, 70, 135}
+	lakeColorAlt = [3]uint8{40, 80, 145}
 )
 
-// Brown palette - limited to 2 colors due to display constraints
-// (channels < 28 render as black)
 var brownPalette = [][3]uint8{
-	{45, 31, 18}, // darker brown (column 20)
-	{49, 34, 19}, // lighter brown (column 24)
+	{45, 31, 18},
+	{49, 34, 19},
 }
 
-// 5x7 pixel font data for uppercase letters and some symbols
 var font5x7 = map[rune][7]uint8{
 	'S': {0x1E, 0x01, 0x01, 0x0E, 0x10, 0x10, 0x0F},
 	'N': {0x11, 0x13, 0x15, 0x19, 0x11, 0x11, 0x11},
@@ -42,18 +39,16 @@ var font5x7 = map[rune][7]uint8{
 	'Y': {0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04},
 }
 
-// setPixel sets a single pixel in the RGB image buffer
 func setPixel(img []byte, x, y int, color [3]uint8) {
-	if x < 0 || x >= 64 || y < 0 || y >= 64 {
+	if x < 0 || x >= 32 || y < 0 || y >= 32 {
 		return
 	}
-	offset := (y*64 + x) * 3
+	offset := (y*32 + x) * 3
 	img[offset] = color[0]
 	img[offset+1] = color[1]
 	img[offset+2] = color[2]
 }
 
-// drawChar draws a single character at the given position using 5x7 font
 func drawChar(img []byte, char rune, x, y int, color [3]uint8) {
 	data, ok := font5x7[char]
 	if !ok {
@@ -68,33 +63,25 @@ func drawChar(img []byte, char rune, x, y int, color [3]uint8) {
 	}
 }
 
-// drawText draws a string of text at the given position
 func drawText(img []byte, text string, x, y int, color [3]uint8) {
 	for i, char := range text {
 		drawChar(img, char, x+i*6, y, color)
 	}
 }
 
-// drawCoiledSnake draws a coiled snake sprite at the given center position
 func drawCoiledSnake(img []byte, cx, cy int) {
-	// Draw a spiral/coiled snake body
-	// Outer ring
 	coilPoints := []struct{ x, y int }{
-		// Outer coil (clockwise)
 		{-8, -4}, {-7, -5}, {-6, -6}, {-5, -7}, {-4, -7}, {-3, -7}, {-2, -7}, {-1, -7},
 		{0, -7}, {1, -7}, {2, -7}, {3, -7}, {4, -7}, {5, -6}, {6, -5}, {7, -4},
 		{7, -3}, {7, -2}, {7, -1}, {7, 0}, {7, 1}, {7, 2}, {7, 3}, {6, 4},
 		{5, 5}, {4, 6}, {3, 6}, {2, 6}, {1, 6}, {0, 6}, {-1, 6}, {-2, 6},
 		{-3, 6}, {-4, 5}, {-5, 4}, {-5, 3}, {-5, 2}, {-5, 1}, {-5, 0},
-		// Inner coil
 		{-5, -1}, {-4, -2}, {-3, -3}, {-2, -4}, {-1, -4}, {0, -4}, {1, -4}, {2, -4},
 		{3, -3}, {4, -2}, {4, -1}, {4, 0}, {4, 1}, {3, 2}, {2, 3}, {1, 3},
 		{0, 3}, {-1, 3}, {-2, 2}, {-2, 1}, {-2, 0},
-		// Center coil
 		{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {0, 0},
 	}
 
-	// Draw body segments with alternating shades
 	for i, p := range coilPoints {
 		var color [3]uint8
 		if i%3 == 0 {
@@ -103,37 +90,27 @@ func drawCoiledSnake(img []byte, cx, cy int) {
 			color = Green
 		}
 		setPixel(img, cx+p.x, cy+p.y, color)
-		// Make snake thicker
 		setPixel(img, cx+p.x+1, cy+p.y, color)
 	}
 
-	// Draw head at the end of the coil (outer position)
 	headX, headY := cx-8, cy-3
 	setPixel(img, headX, headY, BrightGreen)
 	setPixel(img, headX, headY-1, BrightGreen)
 	setPixel(img, headX-1, headY, BrightGreen)
 	setPixel(img, headX-1, headY-1, BrightGreen)
-
-	// Eyes
 	setPixel(img, headX-1, headY-1, white)
 	setPixel(img, headX, headY-1, white)
-
-	// Tongue
 	setPixel(img, headX-2, headY, Red)
 	setPixel(img, headX-3, headY-1, Red)
 	setPixel(img, headX-3, headY+1, Red)
 }
 
-// GenerateCoverImage creates the title screen with "SNAKE" text and coiled snake
 func GenerateCoverImage() []byte {
-	img := make([]byte, 64*64*3)
+	img := make([]byte, 32*32*3)
 
-	// Dark gradient background with subtle pattern
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
-			// Subtle dark gradient from top to bottom
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
 			intensity := uint8(10 + y/8)
-			// Add some subtle noise/pattern
 			if (x+y)%8 == 0 {
 				intensity += 5
 			}
@@ -141,8 +118,7 @@ func GenerateCoverImage() []byte {
 		}
 	}
 
-	// Draw decorative corner dots
-	corners := [][2]int{{2, 2}, {61, 2}, {2, 61}, {61, 61}}
+	corners := [][2]int{{2, 2}, {29, 2}, {2, 29}, {29, 29}}
 	for _, c := range corners {
 		setPixel(img, c[0], c[1], darkGreen)
 		setPixel(img, c[0]-1, c[1], darkGreen)
@@ -151,61 +127,48 @@ func GenerateCoverImage() []byte {
 		setPixel(img, c[0], c[1]+1, darkGreen)
 	}
 
-	// Draw "SNAKE" title at top (centeRed)
-	// "SNAKE" is 5 chars * 6 pixels = 30 pixels wide, center at (64-30)/2 = 17
-	// Draw shadow first
-	drawText(img, "SNAKE", 18, 7, [3]uint8{0, 50, 0})
-	// Draw main text
-	drawText(img, "SNAKE", 17, 6, BrightGreen)
+	drawText(img, "SNAKE", 2, 2, [3]uint8{0, 50, 0})
+	drawText(img, "SNAKE", 1, 1, BrightGreen)
 
-	// Draw coiled snake in center
-	drawCoiledSnake(img, 32, 38)
+	drawCoiledSnake(img, 16, 20)
 
-	// Draw small decorative border lines
-	for x := 5; x < 59; x++ {
+	for x := 2; x < 29; x++ {
 		if x%2 == 0 {
-			setPixel(img, x, 58, gray)
+			setPixel(img, x, 29, gray)
 		}
 	}
 
 	return img
 }
 
-// seed represents a point for Voronoi region generation
 type seed struct {
 	x, y       int
 	colorIndex int
 }
 
-// generateVoronoiBackground creates a terrain-like background for gameplay
-// using Voronoi-like regions with 2 alternating brown colors
 func generateVoronoiBackground() []byte {
-	img := make([]byte, 64*64*3)
+	img := make([]byte, 32*32*3)
 
-	// Generate random seed points for Voronoi regions
-	numSeeds := 40
+	numSeeds := 20
 	seeds := make([]seed, numSeeds)
 
-	// Use a simple LCG for deterministic pseudo-random generation
 	lcgState := uint32(12345)
 	lcgNext := func() uint32 {
 		lcgState = lcgState*1103515245 + 12345
 		return (lcgState >> 16) & 0x7FFF
 	}
 
-	// Generate seed points distributed across the image
 	for i := 0; i < numSeeds; i++ {
 		seeds[i] = seed{
-			x: int(lcgNext() % 64),
-			y: int(lcgNext() % 64),
+			x: int(lcgNext() % 32),
+			y: int(lcgNext() % 32),
 		}
 	}
 
-	// First pass: assign each pixel to nearest seed to determine regions
-	regionMap := make([]int, 64*64)
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
-			minDist := 64*64 + 64*64 // max possible squaRed distance
+	regionMap := make([]int, 32*32)
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			minDist := 32*32 + 32*32
 			nearestSeed := 0
 			for i, s := range seeds {
 				dx := x - s.x
@@ -216,29 +179,27 @@ func generateVoronoiBackground() []byte {
 					nearestSeed = i
 				}
 			}
-			regionMap[y*64+x] = nearestSeed
+			regionMap[y*32+x] = nearestSeed
 		}
 	}
 
-	// Build adjacency list for seeds
 	adjacency := make([]map[int]bool, numSeeds)
 	for i := range adjacency {
 		adjacency[i] = make(map[int]bool)
 	}
 
-	// Find adjacent regions by checking neighboring pixels
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
-			currentRegion := regionMap[y*64+x]
-			if x < 63 {
-				neighborRegion := regionMap[y*64+x+1]
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			currentRegion := regionMap[y*32+x]
+			if x < 31 {
+				neighborRegion := regionMap[y*32+x+1]
 				if neighborRegion != currentRegion {
 					adjacency[currentRegion][neighborRegion] = true
 					adjacency[neighborRegion][currentRegion] = true
 				}
 			}
-			if y < 63 {
-				neighborRegion := regionMap[(y+1)*64+x]
+			if y < 31 {
+				neighborRegion := regionMap[(y+1)*32+x]
 				if neighborRegion != currentRegion {
 					adjacency[currentRegion][neighborRegion] = true
 					adjacency[neighborRegion][currentRegion] = true
@@ -247,8 +208,6 @@ func generateVoronoiBackground() []byte {
 		}
 	}
 
-	// Color regions with 2 colors, alternating so neighbors differ
-	// This is a graph 2-coloring problem
 	for i := range seeds {
 		seeds[i].colorIndex = -1
 	}
@@ -257,7 +216,6 @@ func generateVoronoiBackground() []byte {
 		if seeds[i].colorIndex >= 0 {
 			continue
 		}
-		// BFS to color this connected component
 		queue := []int{i}
 		seeds[i].colorIndex = 0
 		for len(queue) > 0 {
@@ -273,10 +231,9 @@ func generateVoronoiBackground() []byte {
 		}
 	}
 
-	// Draw the image
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
-			region := regionMap[y*64+x]
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			region := regionMap[y*32+x]
 			colorIdx := seeds[region].colorIndex
 			setPixel(img, x, y, brownPalette[colorIdx])
 		}
@@ -285,25 +242,20 @@ func generateVoronoiBackground() []byte {
 	return img
 }
 
-// GenerateBackgroundWithObstacles creates a terrain background with obstacles overlaid.
 func GenerateBackgroundWithObstacles(gameMap *Map) []byte {
-	// Start with the Voronoi terrain background
 	img := generateVoronoiBackground()
 
-	// Overlay obstacles
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
 			tile := gameMap.GetTile(x, y)
 			switch tile {
 			case TileRock:
-				// Dark gray rock with subtle variation
 				color := rockColor
 				if (x+y)%2 == 0 {
 					color = rockColorAlt
 				}
 				setPixel(img, x, y, color)
 			case TileLake:
-				// Blue lake with wave pattern
 				color := lakeColor
 				if (x+y)%3 == 0 {
 					color = lakeColorAlt
@@ -316,26 +268,21 @@ func GenerateBackgroundWithObstacles(gameMap *Map) []byte {
 	return img
 }
 
-// GenerateGameOverImage creates the game over screen
 func GenerateGameOverImage() []byte {
-	img := make([]byte, 64*64*3)
+	img := make([]byte, 32*32*3)
 
-	// Dark Red tinted background
-	for y := 0; y < 64; y++ {
-		for x := 0; x < 64; x++ {
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
 			intensity := uint8(20 + y/4)
 			setPixel(img, x, y, [3]uint8{intensity / 2, 0, 0})
 		}
 	}
 
-	// Draw "GAME" and "OVER" text centeRed on screen
-	// Each word is 4 chars * 6 pixels = 24 pixels wide, center at (64-24)/2 = 20
-	// Total height: 7 + 3 gap + 7 = 17 pixels, center at (64-17)/2 = 23
 	shadowColor := [3]uint8{50, 0, 0}
-	drawText(img, "GAME", 21, 25, shadowColor)
-	drawText(img, "GAME", 20, 24, Red)
-	drawText(img, "OVER", 21, 35, shadowColor)
-	drawText(img, "OVER", 20, 34, Red)
+	drawText(img, "GAME", 5, 9, shadowColor)
+	drawText(img, "GAME", 4, 8, Red)
+	drawText(img, "OVER", 5, 18, shadowColor)
+	drawText(img, "OVER", 4, 17, Red)
 
 	return img
 }

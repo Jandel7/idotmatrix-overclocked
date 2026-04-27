@@ -12,8 +12,8 @@ import (
 
 // Display constants
 const (
-	DisplayWidth  = 64
-	DisplayHeight = 64
+	DisplayWidth  = 32
+	DisplayHeight = 32
 	BufferSize    = DisplayWidth * DisplayHeight * 3
 )
 
@@ -28,7 +28,7 @@ const (
 // Image holds either static RGB data or animated GIF data.
 type Image struct {
 	Type       ImageType
-	StaticData []byte   // Raw RGB (64*64*3 bytes) for static images
+	StaticData []byte   // Raw RGB (32*32*3 bytes) for static images
 	GIFData    *gif.GIF // For animated images
 }
 
@@ -54,12 +54,12 @@ func (img *Image) GIFBytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// NewBuffer creates a new 64x64x3 black buffer.
+// NewBuffer creates a new 32x32x3 black buffer.
 func NewBuffer() []byte {
 	return make([]byte, BufferSize)
 }
 
-// NewBufferWithColor creates a new 64x64x3 buffer filled with the given color.
+// NewBufferWithColor creates a new 32x32x3 buffer filled with the given color.
 func NewBufferWithColor(color Color) []byte {
 	buf := make([]byte, BufferSize)
 	for i := 0; i < DisplayWidth*DisplayHeight; i++ {
@@ -83,7 +83,7 @@ func SetPixel(buf []byte, x, y int, color Color) {
 	buf[offset+2] = color[2]
 }
 
-// ImageToRGB converts an image.Image to a 64x64x3 RGB buffer.
+// ImageToRGB converts an image.Image to a 32x32x3 RGB buffer.
 func ImageToRGB(img image.Image) []byte {
 	buf := make([]byte, BufferSize)
 	bounds := img.Bounds()

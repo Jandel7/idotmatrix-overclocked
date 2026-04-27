@@ -57,12 +57,12 @@ func TestSetPixel(t *testing.T) {
 		assert.Equal(t, c[2], buf[2])
 	})
 
-	t.Run("pixel at (63,63)", func(t *testing.T) {
+	t.Run("pixel at (31,31)", func(t *testing.T) {
 		buf := NewBuffer()
-		SetPixel(buf, 63, 63, c)
+		SetPixel(buf, 31, 31, c)
 
-		// Offset for (63,63) is (63*64 + 63) * 3 = 12285
-		offset := (63*DisplayWidth + 63) * 3
+		// Offset for (31,31) is (31*32 + 31) * 3 = 3069
+		offset := (31*DisplayWidth + 31) * 3
 		assert.Equal(t, c[0], buf[offset])
 		assert.Equal(t, c[1], buf[offset+1])
 		assert.Equal(t, c[2], buf[offset+2])
@@ -73,9 +73,9 @@ func TestSetPixel(t *testing.T) {
 
 		// These should not panic
 		SetPixel(buf, -1, 0, c)
-		SetPixel(buf, 64, 0, c)
+		SetPixel(buf, 32, 0, c)
 		SetPixel(buf, 0, -1, c)
-		SetPixel(buf, 0, 64, c)
+		SetPixel(buf, 0, 32, c)
 
 		// Buffer should remain all zeros (no writes occurred)
 		for i, b := range buf {

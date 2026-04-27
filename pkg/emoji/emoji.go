@@ -25,25 +25,8 @@ type Emoji struct {
 var registry = []Emoji{
 	{Names: []string{"thumbsup", "+1"}, Filename: "thumbsup.gif"},
 	{Names: []string{"thumbsdown", "-1"}, Filename: "thumbsdown.gif"},
-	{Names: []string{"hearthands"}, Filename: "hearthands.gif"},
-	{Names: []string{"clap"}, Filename: "clap.gif"},
-	{Names: []string{"joy"}, Filename: "joy.gif"},
 	{Names: []string{"rofl", "lol"}, Filename: "rofl.gif"},
-	{Names: []string{"party"}, Filename: "party.gif"},
-	{Names: []string{"scream"}, Filename: "scream.gif"},
-	{Names: []string{"rage"}, Filename: "rage.gif"},
-	{Names: []string{"scared"}, Filename: "scared.gif"},
-	{Names: []string{"mindblow"}, Filename: "mindblow.gif"},
-	{Names: []string{"coldface"}, Filename: "coldface.gif"},
-	{Names: []string{"hotface"}, Filename: "hotface.gif"},
-	{Names: []string{"robot"}, Filename: "robot.gif"},
-	{Names: []string{"sparkles"}, Filename: "sparkles.gif"},
-	{Names: []string{"tada"}, Filename: "tada.gif"},
-	{Names: []string{"100"}, Filename: "100.gif"},
-	{Names: []string{"confetti"}, Filename: "confetti.gif"},
-	{Names: []string{"risinghands"}, Filename: "risinghands.gif"},
 	{Names: []string{"rocket"}, Filename: "rocket.gif"},
-	{Names: []string{"birthday"}, Filename: "birthday.gif"},
 }
 
 // Lookup finds an emoji by name (case-insensitive).

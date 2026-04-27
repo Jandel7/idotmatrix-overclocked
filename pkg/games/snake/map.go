@@ -12,11 +12,11 @@ const (
 )
 
 const (
-	mapSize = 64
+	mapSize = 32
 
 	// Safe zone in the center where obstacles cannot be placed
-	safeZoneMin = 20
-	safeZoneMax = 44
+	safeZoneMin = 10
+	safeZoneMax = 22
 
 	// Maximum placement attempts per obstacle
 	maxPlacementAttempts = 1000
@@ -82,12 +82,10 @@ func NewMapGenerator(seed int64) *MapGenerator {
 func (g *MapGenerator) Generate(numRocks, numLakes int) *Map {
 	m := NewMap()
 
-	// Place rocks
 	for i := 0; i < numRocks; i++ {
 		g.placeRock(m)
 	}
 
-	// Place lakes
 	for i := 0; i < numLakes; i++ {
 		g.placeLake(m)
 	}
@@ -95,17 +93,15 @@ func (g *MapGenerator) Generate(numRocks, numLakes int) *Map {
 	return m
 }
 
-// placeRock attempts to place a 4x4, 5x5 or 6x6 rock with rounded corners on the map.
+// placeRock attempts to place a 2x2 or 3x3 rock with rounded corners on the map.
 func (g *MapGenerator) placeRock(m *Map) bool {
 	for attempt := 0; attempt < maxPlacementAttempts; attempt++ {
-		// Random size: 4, 5, or 6
-		size := 4 + g.rng.Intn(3)
+		// Smaller rocks for 32x32: size 2 or 3
+		size := 2 + g.rng.Intn(2)
 
-		// Generate random position with margin for rock size
 		x := g.rng.Intn(mapSize - size)
 		y := g.rng.Intn(mapSize - size)
 
-		// Generate rounded square shape
 		rockPixels := g.generateRoundedSquare(x, y, size)
 
 		if g.canPlaceObstacle(m, rockPixels) {
@@ -118,26 +114,21 @@ func (g *MapGenerator) placeRock(m *Map) bool {
 	return false
 }
 
-// generateRoundedSquare creates a square shape with rounded corners (1 pixel cut).
+// generateRoundedSquare creates a square shape with rounded corners.
 func (g *MapGenerator) generateRoundedSquare(x, y, size int) []Point {
 	var pixels []Point
 
 	for dy := 0; dy < size; dy++ {
 		for dx := 0; dx < size; dx++ {
-			// Skip corner pixels (1 pixel each) to create rounded effect
-			// Top-left corner
 			if dx == 0 && dy == 0 {
 				continue
 			}
-			// Top-right corner
 			if dx == size-1 && dy == 0 {
 				continue
 			}
-			// Bottom-left corner
 			if dx == 0 && dy == size-1 {
 				continue
 			}
-			// Bottom-right corner
 			if dx == size-1 && dy == size-1 {
 				continue
 			}
@@ -149,14 +140,12 @@ func (g *MapGenerator) generateRoundedSquare(x, y, size int) []Point {
 	return pixels
 }
 
-// placeLake attempts to place an irregular lake (15-30 pixels) on the map.
+// placeLake attempts to place an irregular lake (5-10 pixels) on the map.
 func (g *MapGenerator) placeLake(m *Map) bool {
 	for attempt := 0; attempt < maxPlacementAttempts; attempt++ {
-		// Generate random starting position
-		startX := g.rng.Intn(mapSize - 8) + 4 // Leave margin for larger lakes
-		startY := g.rng.Intn(mapSize - 8) + 4
+		startX := g.rng.Intn(mapSize-4) + 2
+		startY := g.rng.Intn(mapSize-4) + 2
 
-		// Generate jagged lake shape using random growth
 		lakePixels := g.generateLakeShape(startX, startY)
 
 		if g.canPlaceObstacle(m, lakePixels) {
@@ -169,33 +158,29 @@ func (g *MapGenerator) placeLake(m *Map) bool {
 	return false
 }
 
-// generateLakeShape creates an irregular lake shape of 15-30 pixels.
+// generateLakeShape creates an irregular lake shape of 5-10 pixels.
 func (g *MapGenerator) generateLakeShape(startX, startY int) []Point {
-	targetSize := 15 + g.rng.Intn(16) // 15-30 pixels
+	targetSize := 5 + g.rng.Intn(6) // 5-10 pixels for 32x32
 
 	pixels := []Point{{startX, startY}}
 	pixelSet := make(map[Point]bool)
 	pixelSet[Point{startX, startY}] = true
 
 	directions := []Point{
-		{0, -1}, {0, 1}, {-1, 0}, {1, 0}, // Cardinal
-		{-1, -1}, {1, -1}, {-1, 1}, {1, 1}, // Diagonal
+		{0, -1}, {0, 1}, {-1, 0}, {1, 0},
+		{-1, -1}, {1, -1}, {-1, 1}, {1, 1},
 	}
 
 	for len(pixels) < targetSize {
-		// Pick a random existing pixel
 		base := pixels[g.rng.Intn(len(pixels))]
 
-		// Try to grow in a random direction
 		dir := directions[g.rng.Intn(len(directions))]
 		newP := Point{base.X + dir.X, base.Y + dir.Y}
 
-		// Check bounds
 		if newP.X < 0 || newP.X >= mapSize || newP.Y < 0 || newP.Y >= mapSize {
 			continue
 		}
 
-		// Check if already in lake
 		if pixelSet[newP] {
 			continue
 		}
@@ -210,28 +195,23 @@ func (g *MapGenerator) generateLakeShape(startX, startY int) []Point {
 // canPlaceObstacle checks if the given pixels can be placed as an obstacle.
 func (g *MapGenerator) canPlaceObstacle(m *Map, pixels []Point) bool {
 	for _, p := range pixels {
-		// Check bounds
 		if p.X < 0 || p.X >= mapSize || p.Y < 0 || p.Y >= mapSize {
 			return false
 		}
 
-		// Check safe zone
 		if p.X >= safeZoneMin && p.X < safeZoneMax && p.Y >= safeZoneMin && p.Y < safeZoneMax {
 			return false
 		}
 
-		// Check if already an obstacle
 		if m.Tiles[p.Y][p.X] != TileTerrain {
 			return false
 		}
 
-		// Check for adjacent obstacles (no diagonal, just cardinal directions)
 		adjacent := []Point{
 			{p.X - 1, p.Y}, {p.X + 1, p.Y},
 			{p.X, p.Y - 1}, {p.X, p.Y + 1},
 		}
 		for _, adj := range adjacent {
-			// Don't check pixels that are part of the same obstacle being placed
 			isPartOfSame := false
 			for _, op := range pixels {
 				if op == adj {
@@ -243,7 +223,6 @@ func (g *MapGenerator) canPlaceObstacle(m *Map, pixels []Point) bool {
 				continue
 			}
 
-			// Check if adjacent to existing obstacle
 			if adj.X >= 0 && adj.X < mapSize && adj.Y >= 0 && adj.Y < mapSize {
 				if m.Tiles[adj.Y][adj.X] != TileTerrain {
 					return false

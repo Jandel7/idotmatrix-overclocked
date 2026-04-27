@@ -25,7 +25,7 @@ func TestRendererComputeDiff(t *testing.T) {
 			name:      "single pixel changed",
 			setupPrev: func(r *Renderer) {},
 			setupCurr: func(r *Renderer) {
-				r.currBuffer[0] = 255 // R at (0,0)
+				r.currBuffer[0] = 255
 			},
 			expectedColors: 1,
 			expectedPixels: 1,
@@ -34,10 +34,9 @@ func TestRendererComputeDiff(t *testing.T) {
 			name:      "multiple pixels same color grouped",
 			setupPrev: func(r *Renderer) {},
 			setupCurr: func(r *Renderer) {
-				// Set 3 pixels to red
 				for i := 0; i < 3; i++ {
 					offset := i * 3
-					r.currBuffer[offset] = 255 // R
+					r.currBuffer[offset] = 255
 				}
 			},
 			expectedColors: 1,
@@ -47,11 +46,8 @@ func TestRendererComputeDiff(t *testing.T) {
 			name:      "multiple colors separate groups",
 			setupPrev: func(r *Renderer) {},
 			setupCurr: func(r *Renderer) {
-				// Pixel 0: red
 				r.currBuffer[0] = 255
-				// Pixel 1: green
 				r.currBuffer[4] = 255
-				// Pixel 2: blue
 				r.currBuffer[8] = 255
 			},
 			expectedColors: 3,
@@ -85,17 +81,14 @@ func TestRendererComputeDiff(t *testing.T) {
 func TestRendererRenderState(t *testing.T) {
 	r := &Renderer{}
 	board := NewBoard()
-	background := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	background := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 
-	// Fill background with a pattern to verify it's copied
 	for i := range background {
 		background[i] = 50
 	}
 
-	// Render empty board
 	r.RenderState(board, nil, background)
 
-	// Background should be copied
 	buf := r.GetCurrBuffer()
 	if buf[0] != 50 || buf[1] != 50 || buf[2] != 50 {
 		t.Error("background should be copied to buffer")
@@ -105,15 +98,13 @@ func TestRendererRenderState(t *testing.T) {
 func TestRendererRenderLockedPieces(t *testing.T) {
 	r := &Renderer{}
 	board := NewBoard()
-	background := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	background := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 
-	// Lock a piece on the board
 	board.Cells[BoardHeight-1][0].Occupied = true
 	board.Cells[BoardHeight-1][0].Color = graphic.Color{255, 0, 0}
 
 	r.RenderState(board, nil, background)
 
-	// Check that the block is rendered at the correct display position
 	displayX := BoardOffsetX + 0*BlockSize
 	displayY := BoardOffsetY + (BoardHeight-1)*BlockSize
 	offset := (displayY*graphic.DisplayWidth + displayX) * 3
@@ -128,15 +119,13 @@ func TestRendererRenderLockedPieces(t *testing.T) {
 func TestRendererRenderCurrentPiece(t *testing.T) {
 	r := &Renderer{}
 	board := NewBoard()
-	background := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	background := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 
-	// Create a T piece at position (3, 5)
 	tetro := Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 5}
 	color := tetro.GetColor()
 
 	r.RenderState(board, &tetro, background)
 
-	// Check one of the T piece cells (center bottom: boardX=4, boardY=6)
 	displayX := BoardOffsetX + 4*BlockSize
 	displayY := BoardOffsetY + 6*BlockSize
 	offset := (displayY*graphic.DisplayWidth + displayX) * 3
@@ -151,17 +140,15 @@ func TestRendererRenderCurrentPiece(t *testing.T) {
 func TestRendererBlockSize(t *testing.T) {
 	r := &Renderer{}
 	board := NewBoard()
-	background := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	background := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 
-	// Lock a piece
-	board.Cells[10][5].Occupied = true
-	board.Cells[10][5].Color = graphic.Color{255, 0, 0}
+	board.Cells[9][5].Occupied = true
+	board.Cells[9][5].Color = graphic.Color{255, 0, 0}
 
 	r.RenderState(board, nil, background)
 
-	// Verify the entire 3x3 block is filled
 	baseX := BoardOffsetX + 5*BlockSize
-	baseY := BoardOffsetY + 10*BlockSize
+	baseY := BoardOffsetY + 9*BlockSize
 
 	buf := r.GetCurrBuffer()
 	for dy := 0; dy < BlockSize; dy++ {
@@ -177,15 +164,13 @@ func TestRendererBlockSize(t *testing.T) {
 func TestRendererSetPrevBuffer(t *testing.T) {
 	r := &Renderer{}
 
-	// Set prev buffer to all 100s
-	prevData := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	prevData := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 	for i := range prevData {
 		prevData[i] = 100
 	}
 	r.SetPrevBuffer(prevData)
 
-	// Set curr buffer to same values (no diff expected)
-	currData := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	currData := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 	for i := range currData {
 		currData[i] = 100
 	}
@@ -196,7 +181,6 @@ func TestRendererSetPrevBuffer(t *testing.T) {
 		t.Error("identical buffers should have no diff")
 	}
 
-	// Now change one pixel in curr
 	r.currBuffer[0] = 200
 
 	diff = r.ComputeDiff()
@@ -208,13 +192,9 @@ func TestRendererSetPrevBuffer(t *testing.T) {
 func TestRendererPieceAboveBoardNotRendered(t *testing.T) {
 	r := &Renderer{}
 	board := NewBoard()
-	background := make([]byte, graphic.DisplayWidth*graphic.DisplayWidth*3)
+	background := make([]byte, graphic.DisplayWidth*graphic.DisplayHeight*3)
 
-	// Create piece with Y=-1 (partially above board)
 	tetro := Tetromino{Type: TetrominoI, Rotation: Rotation90, X: 0, Y: -2}
 
 	r.RenderState(board, &tetro, background)
-
-	// Cells at negative Y should not be rendered (would be at negative display coords)
-	// This test verifies no crash occurs
 }

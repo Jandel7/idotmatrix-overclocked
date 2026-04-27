@@ -9,9 +9,9 @@ import (
 
 // Rendering constants
 const (
-	BlockSize    = 3  // Each tetris cell = 3x3 display pixels
-	BoardOffsetX = 17 // X offset to center board: (64 - 10*3) / 2
-	BoardOffsetY = 2  // Y offset to center board: (64 - 20*3) / 2
+	BlockSize    = 3 // Each tetris cell = 3x3 display pixels
+	BoardOffsetX = 1 // X offset to center board: (32 - 10*3) / 2
+	BoardOffsetY = 1 // Y offset to center board
 )
 
 // Renderer handles diff-based rendering to the device
@@ -29,12 +29,9 @@ func NewRenderer(device protocol.DeviceConnection) *Renderer {
 }
 
 // RenderState converts game state to the pixel buffer
-// This is a pure function that updates currBuffer without I/O
 func (r *Renderer) RenderState(board *Board, current *Tetromino, background []byte) {
-	// Start with background
 	copy(r.currBuffer[:], background)
 
-	// Draw locked pieces on the board
 	for y := 0; y < BoardHeight; y++ {
 		for x := 0; x < BoardWidth; x++ {
 			cell := board.GetCell(x, y)
@@ -44,30 +41,27 @@ func (r *Renderer) RenderState(board *Board, current *Tetromino, background []by
 		}
 	}
 
-	// Draw current piece
 	if current != nil {
 		cells := current.GetCells()
 		color := current.GetColor()
 		for _, cell := range cells {
-			if cell.Y >= 0 { // Only draw cells that are on the visible board
+			if cell.Y >= 0 {
 				r.drawBlock(cell.X, cell.Y, color)
 			}
 		}
 	}
 }
 
-// drawBlock draws a single tetris block (3x3 pixels) on the buffer
+// drawBlock draws a single tetris block on the buffer
 func (r *Renderer) drawBlock(boardX, boardY int, color graphic.Color) {
-	// Convert board coordinates to display coordinates
 	displayX := BoardOffsetX + boardX*BlockSize
 	displayY := BoardOffsetY + boardY*BlockSize
 
-	// Draw 3x3 block
 	for dy := 0; dy < BlockSize; dy++ {
 		for dx := 0; dx < BlockSize; dx++ {
 			px := displayX + dx
 			py := displayY + dy
-			if px >= 0 && px < graphic.DisplayWidth && py >= 0 && py < graphic.DisplayWidth {
+			if px >= 0 && px < graphic.DisplayWidth && py >= 0 && py < graphic.DisplayHeight {
 				offset := (py*graphic.DisplayWidth + px) * 3
 				r.currBuffer[offset] = color[0]
 				r.currBuffer[offset+1] = color[1]
@@ -78,11 +72,10 @@ func (r *Renderer) drawBlock(boardX, boardY int, color graphic.Color) {
 }
 
 // ComputeDiff finds changed pixels grouped by color
-// Returns a map of color to list of points that changed to that color
 func (r *Renderer) ComputeDiff() map[graphic.Color][]graphic.Point {
 	diff := make(map[graphic.Color][]graphic.Point)
 
-	for y := 0; y < graphic.DisplayWidth; y++ {
+	for y := 0; y < graphic.DisplayHeight; y++ {
 		for x := 0; x < graphic.DisplayWidth; x++ {
 			offset := (y*graphic.DisplayWidth + x) * 3
 			prevR, prevG, prevB := r.prevBuffer[offset], r.prevBuffer[offset+1], r.prevBuffer[offset+2]
@@ -98,12 +91,11 @@ func (r *Renderer) ComputeDiff() map[graphic.Color][]graphic.Point {
 	return diff
 }
 
-// Flush sends changed pixels to the device using multi-pixel packets
+// Flush sends changed pixels to the device
 func (r *Renderer) Flush() error {
 	diff := r.ComputeDiff()
 
 	for color, points := range diff {
-		// Split points into chunks of MaxPixelsPerPacket
 		for i := 0; i < len(points); i += protocol.MaxPixelsPerPacket {
 			end := i + protocol.MaxPixelsPerPacket
 			if end > len(points) {
@@ -118,23 +110,22 @@ func (r *Renderer) Flush() error {
 		}
 	}
 
-	// Update previous buffer
 	copy(r.prevBuffer[:], r.currBuffer[:])
 
 	return nil
 }
 
-// SetPrevBuffer sets the previous buffer (used for initial state)
+// SetPrevBuffer sets the previous buffer
 func (r *Renderer) SetPrevBuffer(data []byte) {
 	copy(r.prevBuffer[:], data)
 }
 
-// SetCurrBuffer sets the current buffer (used for initial state)
+// SetCurrBuffer sets the current buffer
 func (r *Renderer) SetCurrBuffer(data []byte) {
 	copy(r.currBuffer[:], data)
 }
 
-// GetCurrBuffer returns a copy of the current buffer (for testing)
+// GetCurrBuffer returns a copy of the current buffer
 func (r *Renderer) GetCurrBuffer() []byte {
 	buf := make([]byte, len(r.currBuffer))
 	copy(buf, r.currBuffer[:])

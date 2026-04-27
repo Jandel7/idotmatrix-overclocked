@@ -88,7 +88,6 @@ func (g *Game) resetSnakePosition(length int) {
 func (g *Game) advanceLevel() {
 	g.currentLevel++
 	g.applesEaten = 0
-	// Preserve snake length when advancing levels
 	currentLength := len(g.snake)
 	g.resetSnakePosition(currentLength)
 }
@@ -97,20 +96,16 @@ func (g *Game) advanceLevel() {
 func (g *Game) setupLevel() {
 	g.levelConfig = GetLevelConfig(g.currentLevel)
 
-	// Generate new map with obstacles
 	mapGen := NewMapGenerator(time.Now().UnixNano())
 	g.gameMap = mapGen.Generate(g.levelConfig.NumRocks, g.levelConfig.NumLakes)
 
-	// Generate and store background with obstacles
 	g.background = GenerateBackgroundWithObstacles(g.gameMap)
 }
 
 // spawnFood places food on a valid terrain position.
 func (g *Game) spawnFood() {
-	// Get all terrain positions
 	terrain := g.gameMap.TerrainPositions()
 
-	// Filter out snake positions
 	snakeSet := make(map[Point]bool)
 	for _, p := range g.snake {
 		snakeSet[p] = true
@@ -118,11 +113,9 @@ func (g *Game) spawnFood() {
 
 	var validPositions []Point
 	for _, p := range terrain {
-		// Skip if on snake
 		if snakeSet[p] {
 			continue
 		}
-		// Skip edge positions (at least 1 pixel from edge)
 		if p.X == 0 || p.X == DisplaySize-1 || p.Y == 0 || p.Y == DisplaySize-1 {
 			continue
 		}
@@ -130,7 +123,6 @@ func (g *Game) spawnFood() {
 	}
 
 	if len(validPositions) == 0 {
-		// No valid positions (extremely rare), just pick random terrain
 		g.food = terrain[rand.Intn(len(terrain))]
 		return
 	}
@@ -140,7 +132,7 @@ func (g *Game) spawnFood() {
 
 // getBackgroundPixel returns the background color at the given position.
 func (g *Game) getBackgroundPixel(x, y int) (uint8, uint8, uint8) {
-	offset := (y*64 + x) * 3
+	offset := (y*32 + x) * 3
 	return g.background[offset], g.background[offset+1], g.background[offset+2]
 }
 
@@ -162,15 +154,12 @@ func (g *Game) calculateNewHead() Point {
 
 // isCollision checks if the given point causes a collision.
 func (g *Game) isCollision(p Point) bool {
-	// Wall collision
 	if p.X < 0 || p.X >= DisplaySize || p.Y < 0 || p.Y >= DisplaySize {
 		return true
 	}
-	// Obstacle collision
 	if g.gameMap.IsObstacle(p.X, p.Y) {
 		return true
 	}
-	// Self collision (check against body, not including the tail that will be removed)
 	for i := 0; i < len(g.snake)-1; i++ {
 		if g.snake[i] == p {
 			return true
@@ -180,7 +169,6 @@ func (g *Game) isCollision(p Point) bool {
 }
 
 // move moves the snake and returns pixel changes to render.
-// Returns true if level should advance.
 func (g *Game) move() ([]PixelChange, bool) {
 	var changes []PixelChange
 
@@ -191,33 +179,25 @@ func (g *Game) move() ([]PixelChange, bool) {
 		return nil, false
 	}
 
-	// Add new head (green pixel)
 	changes = append(changes, PixelChange{newHead, 0, 255, 0})
 	g.snake = append([]Point{newHead}, g.snake...)
 
-	// Check if eating food
 	if newHead == g.food {
 		g.score++
 		g.applesEaten++
-		g.growthQueue += GrowthPerApple // Queue growth
+		g.growthQueue += GrowthPerApple
 
-		// Check for level advancement
 		if g.applesEaten >= ApplesPerLevel {
-			return changes, true // Signal level advance
+			return changes, true
 		}
 
-		// Spawn new food
 		g.spawnFood()
-		// Draw new food (red pixel)
 		changes = append(changes, PixelChange{g.food, 255, 0, 0})
 	}
 
-	// Handle tail: grow if growth queued, otherwise remove tail
 	if g.growthQueue > 0 {
 		g.growthQueue--
-		// Don't remove tail when growing
 	} else {
-		// Remove tail (restore background pixel)
 		tail := g.snake[len(g.snake)-1]
 		r, gb, b := g.getBackgroundPixel(tail.X, tail.Y)
 		changes = append(changes, PixelChange{tail, r, gb, b})
@@ -257,12 +237,10 @@ func (g *Game) handleInput() {
 
 // renderInitial draws the initial snake and food on the display.
 func (g *Game) renderInitial() {
-	// Draw the snake
 	for _, p := range g.snake {
 		protocol.SetPixel(g.device, p.X, p.Y, 0, 255, 0)
 		time.Sleep(20 * time.Millisecond)
 	}
-	// Draw the food
 	protocol.SetPixel(g.device, g.food.X, g.food.Y, 255, 0, 0)
 	time.Sleep(20 * time.Millisecond)
 }
@@ -300,16 +278,15 @@ func (g *Game) startInputReader() func() {
 				return
 			}
 			if n > 0 {
-				// Handle escape sequences for arrow keys
 				if n == 3 && buf[0] == 27 && buf[1] == 91 {
 					switch buf[2] {
-					case 65: // up arrow
+					case 65:
 						g.inputChan <- 'w'
-					case 66: // down arrow
+					case 66:
 						g.inputChan <- 's'
-					case 67: // right arrow
+					case 67:
 						g.inputChan <- 'd'
-					case 68: // left arrow
+					case 68:
 						g.inputChan <- 'a'
 					}
 				} else {
@@ -326,24 +303,19 @@ func (g *Game) startInputReader() func() {
 
 // runLevel runs a single level and returns true if the game should continue.
 func (g *Game) runLevel() (continueGame bool, advanceLevel bool) {
-	// Setup level
 	g.setupLevel()
 
-	// Show level interstitial
 	if err := g.showLevelInterstitial(); err != nil {
 		return false, false
 	}
 
-	// Display background with obstacles
 	if err := g.showImage(g.background); err != nil {
 		return false, false
 	}
 
-	// Spawn food and draw initial state
 	g.spawnFood()
 	g.renderInitial()
 
-	// Game tick loop
 	for g.running && !g.gameOver {
 		tickStart := time.Now()
 
@@ -352,7 +324,7 @@ func (g *Game) runLevel() (continueGame bool, advanceLevel bool) {
 		if !g.gameOver {
 			changes, shouldAdvance := g.move()
 			if shouldAdvance {
-				return true, true // Continue game, advance level
+				return true, true
 			}
 			for _, c := range changes {
 				protocol.SetPixel(g.device, c.pos.X, c.pos.Y, c.r, c.g, c.b)
@@ -368,10 +340,10 @@ func (g *Game) runLevel() (continueGame bool, advanceLevel bool) {
 	}
 
 	if !g.running {
-		return false, false // Quit
+		return false, false
 	}
 
-	return true, false // Game over, don't advance
+	return true, false
 }
 
 // Run starts the main game loop.
@@ -383,21 +355,18 @@ func (g *Game) Run() error {
 	defer cleanup()
 
 	for g.running {
-		// Show cover image and wait for key to start
 		if err := g.showImage(GenerateCoverImage()); err != nil {
 			return err
 		}
 		fmt.Print("Press any key to start...")
 		key := g.waitForKey()
-		fmt.Println() // Move to next line after key press
+		fmt.Println()
 		if key == 'q' || key == 'Q' {
 			break
 		}
 
-		// Reset and start game
 		g.reset()
 
-		// Level loop
 		for g.running && !g.gameOver {
 			continueGame, advance := g.runLevel()
 			if !continueGame {
@@ -412,7 +381,6 @@ func (g *Game) Run() error {
 			break
 		}
 
-		// Game over - show game over image and wait for any key to restart (Q to quit)
 		if err := g.showImage(GenerateGameOverImage()); err != nil {
 			return err
 		}

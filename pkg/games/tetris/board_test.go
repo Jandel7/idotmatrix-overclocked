@@ -8,63 +8,63 @@ import (
 
 func TestBoardIsValidPosition(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    func(*Board)
+		name      string
+		setup     func(*Board)
 		tetromino Tetromino
-		expected bool
+		expected  bool
 	}{
 		{
-			name:     "piece within bounds valid",
-			setup:    func(b *Board) {},
+			name:      "piece within bounds valid",
+			setup:     func(b *Board) {},
 			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 5},
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "piece left of board invalid",
-			setup:    func(b *Board) {},
+			name:      "piece left of board invalid",
+			setup:     func(b *Board) {},
 			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: -1, Y: 5},
-			expected: false,
+			expected:  false,
 		},
 		{
-			name:     "piece right of board invalid",
-			setup:    func(b *Board) {},
-			tetromino: Tetromino{Type: TetrominoI, Rotation: Rotation0, X: 8, Y: 5}, // I piece is 4 wide
-			expected: false,
+			name:      "piece right of board invalid",
+			setup:     func(b *Board) {},
+			tetromino: Tetromino{Type: TetrominoI, Rotation: Rotation0, X: 8, Y: 5},
+			expected:  false,
 		},
 		{
-			name:     "piece below board invalid",
-			setup:    func(b *Board) {},
-			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 19}, // T at row 19, extends to 20
-			expected: false,
+			name:      "piece below board invalid",
+			setup:     func(b *Board) {},
+			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 19},
+			expected:  false,
 		},
 		{
 			name: "piece overlapping locked cell invalid",
 			setup: func(b *Board) {
-				b.Cells[6][4].Occupied = true // Block where T piece would go
+				b.Cells[6][4].Occupied = true
 			},
-			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 5}, // T at (3,5) has cell at (4,6)
-			expected: false,
+			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 5},
+			expected:  false,
 		},
 		{
 			name: "piece in empty space with locked cells nearby valid",
 			setup: func(b *Board) {
-				b.Cells[7][4].Occupied = true // Below where piece would be
-				b.Cells[6][2].Occupied = true // Left of where piece would be
+				b.Cells[7][4].Occupied = true
+				b.Cells[6][2].Occupied = true
 			},
 			tetromino: Tetromino{Type: TetrominoT, Rotation: Rotation0, X: 3, Y: 5},
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "piece at spawn position valid on empty board",
-			setup:    func(b *Board) {},
+			name:      "piece at spawn position valid on empty board",
+			setup:     func(b *Board) {},
 			tetromino: NewTetromino(TetrominoI),
-			expected: true,
+			expected:  true,
 		},
 		{
-			name:     "piece partially above board valid",
-			setup:    func(b *Board) {},
-			tetromino: Tetromino{Type: TetrominoI, Rotation: Rotation90, X: 0, Y: -2}, // Vertical I piece
-			expected: true,
+			name:      "piece partially above board valid",
+			setup:     func(b *Board) {},
+			tetromino: Tetromino{Type: TetrominoI, Rotation: Rotation90, X: 0, Y: -2},
+			expected:  true,
 		},
 	}
 
@@ -87,7 +87,6 @@ func TestBoardLock(t *testing.T) {
 
 	board.Lock(tetro)
 
-	// T piece at (3,5) rotation 0 occupies: (4,5), (3,6), (4,6), (5,6)
 	expectedCells := []graphic.Point{{4, 5}, {3, 6}, {4, 6}, {5, 6}}
 	expectedColor := tetro.GetColor()
 
@@ -102,7 +101,6 @@ func TestBoardLock(t *testing.T) {
 		}
 	}
 
-	// Check that adjacent cells are not occupied
 	notOccupied := []graphic.Point{{2, 5}, {2, 6}, {6, 6}, {4, 7}}
 	for _, p := range notOccupied {
 		cell := board.GetCell(p.X, p.Y)
@@ -122,7 +120,6 @@ func TestBoardClearLines(t *testing.T) {
 		{
 			name: "no complete lines returns 0",
 			setup: func(b *Board) {
-				// Partial line at bottom
 				for x := 0; x < BoardWidth-1; x++ {
 					b.Cells[BoardHeight-1][x].Occupied = true
 				}
@@ -133,25 +130,21 @@ func TestBoardClearLines(t *testing.T) {
 		{
 			name: "one complete line returns 1",
 			setup: func(b *Board) {
-				// Complete line at bottom
 				for x := 0; x < BoardWidth; x++ {
 					b.Cells[BoardHeight-1][x].Occupied = true
 					b.Cells[BoardHeight-1][x].Color = graphic.Color{255, 0, 0}
 				}
-				// Partial line above
 				b.Cells[BoardHeight-2][0].Occupied = true
 				b.Cells[BoardHeight-2][0].Color = graphic.Color{0, 255, 0}
 			},
 			expectedLines: 1,
 			checkAfter: func(t *testing.T, b *Board) {
-				// The partial line should have dropped to bottom
 				if !b.Cells[BoardHeight-1][0].Occupied {
 					t.Error("cell should have dropped to bottom row")
 				}
 				if b.Cells[BoardHeight-1][0].Color != (graphic.Color{0, 255, 0}) {
 					t.Error("dropped cell should have green color")
 				}
-				// Rest of bottom row should be empty now
 				for x := 1; x < BoardWidth; x++ {
 					if b.Cells[BoardHeight-1][x].Occupied {
 						t.Errorf("cell at (%d, %d) should be empty after line clear", x, BoardHeight-1)
@@ -162,7 +155,6 @@ func TestBoardClearLines(t *testing.T) {
 		{
 			name: "two lines cleared at once returns 2",
 			setup: func(b *Board) {
-				// Two complete lines at bottom
 				for y := BoardHeight - 2; y < BoardHeight; y++ {
 					for x := 0; x < BoardWidth; x++ {
 						b.Cells[y][x].Occupied = true
@@ -171,7 +163,6 @@ func TestBoardClearLines(t *testing.T) {
 			},
 			expectedLines: 2,
 			checkAfter: func(t *testing.T, b *Board) {
-				// Both rows should be empty
 				for y := BoardHeight - 2; y < BoardHeight; y++ {
 					for x := 0; x < BoardWidth; x++ {
 						if b.Cells[y][x].Occupied {
@@ -184,22 +175,19 @@ func TestBoardClearLines(t *testing.T) {
 		{
 			name: "clearing middle line drops above",
 			setup: func(b *Board) {
-				// Complete line in middle
 				for x := 0; x < BoardWidth; x++ {
-					b.Cells[10][x].Occupied = true
+					b.Cells[5][x].Occupied = true
 				}
-				// Single cell above
-				b.Cells[9][5].Occupied = true
-				b.Cells[9][5].Color = graphic.Color{0, 0, 255}
+				b.Cells[4][5].Occupied = true
+				b.Cells[4][5].Color = graphic.Color{0, 0, 255}
 			},
 			expectedLines: 1,
 			checkAfter: func(t *testing.T, b *Board) {
-				// Cell should have dropped
-				if !b.Cells[10][5].Occupied {
-					t.Error("cell should have dropped to row 10")
+				if !b.Cells[5][5].Occupied {
+					t.Error("cell should have dropped to row 5")
 				}
-				if b.Cells[9][5].Occupied {
-					t.Error("row 9 should be empty after drop")
+				if b.Cells[4][5].Occupied {
+					t.Error("row 4 should be empty after drop")
 				}
 			},
 		},

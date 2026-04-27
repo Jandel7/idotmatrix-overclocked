@@ -24,15 +24,15 @@ func TestSetPixel(t *testing.T) {
 		},
 		{
 			name:     "pixel at corner with green",
-			x:        63, y: 63,
+			x:        31, y: 31,
 			r:        0, g: 255, b: 0,
-			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 255, 0, 63, 63},
+			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 255, 0, 31, 31},
 		},
 		{
 			name:     "pixel at center with blue",
-			x:        32, y: 32,
+			x:        16, y: 16,
 			r:        0, g: 0, b: 255,
-			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 0, 255, 32, 32},
+			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 0, 255, 16, 16},
 		},
 	}
 
@@ -64,21 +64,19 @@ func TestSetPixels(t *testing.T) {
 			name:   "single pixel",
 			color:  graphic.Color{255, 0, 0},
 			points: []graphic.Point{{X: 10, Y: 20}},
-			// size = 8 + 2*1 = 10, sizeLSB=10, sizeMSB=0
 			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 255, 0, 0, 10, 20},
 		},
 		{
 			name:   "multiple pixels same color",
 			color:  graphic.Color{0, 255, 0},
 			points: []graphic.Point{{X: 0, Y: 0}, {X: 1, Y: 1}, {X: 2, Y: 2}},
-			// size = 8 + 2*3 = 14, sizeLSB=14, sizeMSB=0
 			expected: []byte{0x0E, 0x00, 0x05, 0x01, 0x00, 0, 255, 0, 0, 0, 1, 1, 2, 2},
 		},
 		{
 			name:   "blue color",
 			color:  graphic.Color{0, 0, 255},
-			points: []graphic.Point{{X: 63, Y: 63}},
-			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 0, 255, 63, 63},
+			points: []graphic.Point{{X: 31, Y: 31}},
+			expected: []byte{0x0A, 0x00, 0x05, 0x01, 0x00, 0, 0, 255, 31, 31},
 		},
 	}
 
@@ -102,7 +100,7 @@ func TestSetPixelsTruncatesAt255(t *testing.T) {
 	// Create 300 points - should be truncated to 255
 	points := make([]graphic.Point, 300)
 	for i := 0; i < 300; i++ {
-		points[i] = graphic.Point{X: i % 64, Y: i / 64}
+		points[i] = graphic.Point{X: i % 32, Y: i / 32}
 	}
 
 	mock := &DeviceConnectionMock{}
@@ -110,12 +108,9 @@ func TestSetPixelsTruncatesAt255(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, mock.WrittenPackets, 1)
 
-	// size = 8 + 2*255 = 518 = 0x206
-	// sizeLSB = 0x06, sizeMSB = 0x02
 	packet := mock.WrittenPackets[0]
 	assert.Equal(t, byte(0x06), packet[0], "sizeLSB should be 0x06")
 	assert.Equal(t, byte(0x02), packet[1], "sizeMSB should be 0x02")
 
-	// Packet should have 8 header bytes + 255*2 coordinate bytes = 518 bytes
 	assert.Len(t, packet, 518)
 }
